@@ -21,7 +21,7 @@ class PetRepository
         return Pet::create($data); // Create a new pet in the database
     }
 
-    public function update($id, array $data)
+    public function update(array $data, $id)
     {
         $pet = Pet::findOrFail($id); // Find the pet by its ID
         $pet->update($data); // Update the pet

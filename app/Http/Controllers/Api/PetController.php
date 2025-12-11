@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-
+use App\Models\Pet;
 // Import the PetService — this connects your controller to the Service layer.
 // The PetService in turn talks to the PetRepository, which interacts with the database.
 use App\Services\PetService;
@@ -23,6 +23,11 @@ class PetController extends Controller
     public function __construct(PetService $petService)
     {
         $this->petService = $petService;
+    }
+
+    public function fetchPet($id)
+    {
+        return response()->json($this->petService->getPet($id));
     }
 
     // 📡 GET /api/pets
@@ -54,5 +59,55 @@ class PetController extends Controller
 
         // 🧾 Step 3: Return a JSON response with the created pet and a 201 (Created) status code.
         return response()->json($createdPet, 201);
+    }
+
+    public function updatePetProfile(Request $request, $id)
+    {
+        // 1. Validation (422 handled by Laravel)
+        $data = $request->validate([
+            'name' => 'required|string',
+            'species' => 'required|string',
+            'age' => 'nullable|integer',
+        ]);
+
+        // 2. Manual 404 Check (The Find or Fail Method)
+        // If the pet is NOT found, Laravel throws a ModelNotFoundException, 
+        // which automatically returns a 404 Not Found response.
+        $pet = Pet::findOrFail($id);
+
+        // 3. Business Logic: Update the Model via the Service
+        // You now pass the $data and the retrieved Model's ID.
+        $updatedPet = $this->petService->updatePet($data, $pet->id);
+
+        // 4. System Error Check (Assuming service returns null/false on low-level failure)
+        if (!$updatedPet) {
+            return response()->json([
+                'message' => 'System error during update.',
+                'id' => $id
+            ], 500);
+        }
+
+        // 5. Response if success:
+        return response()->json([
+            'message' => 'Pet updated successfully.',
+            'data' => $updatedPet
+        ], 200);
+    }
+
+    public function deletePetProfile($id)
+    {
+        $deletedPet = $this->petService->deletePet($id);
+
+        if ($deletedPet === false) {
+            return response()->json([
+                'message' => 'System error during deletion.',
+                'id' => $id
+            ], 500);
+        }
+
+        return response()->json([
+            'message' => 'Pet deleted successfully.',
+            'id' => $id
+        ], 200);
     }
 }
